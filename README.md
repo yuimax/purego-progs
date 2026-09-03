@@ -8,8 +8,3 @@
 * **make.exe** --- https://gnuwin32.sourceforge.net/packages/make.htm
 * **goversioninfo.exe** --- https://github.com/josephspurrier/goversioninfo
 * **rm.exe** --- [Git for Windows](https://gitforwindows.org/) に付いてくるやつでよい
-
-## プロジェクトリスト
-
-* [001-Window](001-Window) --- ウィンドウの表示
-
