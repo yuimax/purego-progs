@@ -1,4 +1,4 @@
-# Makefile for Go + walk
+# Makefile for Go + purego
 
 APP := $(notdir $(CURDIR))
 	
