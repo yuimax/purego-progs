@@ -21,14 +21,14 @@
     "StringFileInfo": {
         "Comments": "",
         "CompanyName": "",
-        "FileDescription": "walk 001-MainWindow",
+        "FileDescription": "purego 001-MainWindow",
         "FileVersion": "1.0.0.0",
         "InternalName": "001-MainWindow",
-        "LegalCopyright": "https://github.com/yuimax/walk-progs",
+        "LegalCopyright": "https://github.com/yuimax/purego-progs",
         "LegalTrademarks": "",
         "OriginalFilename": "001-MainWindow.exe",
         "PrivateBuild": "",
-        "ProductName": "walk-progs 001-MainWindow",
+        "ProductName": "purego-progs 001-MainWindow",
         "ProductVersion": "1.0.0.0",
         "SpecialBuild": ""
     },
@@ -39,5 +39,5 @@
         }
     },
     "IconPath": "../files/icon.ico",
-    "ManifestPath": "../files/gowalk.manifest"
+    "ManifestPath": "../files/purego.manifest"
 }
