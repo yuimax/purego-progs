@@ -1,12 +1,8 @@
 # files
 
-* 各種データファイル
-
-## file list
-
-![ALT](cathy-renoir.jpg)
-![ALT](cathy-ukiyoe.jpg)
-![ALT](cathy-vroid.jpg)
-![ALT](daisy-renoir.jpg)
-![ALT](daisy-ukiyoe.jpg)
-![ALT](daisy-vroid.jpg)
+<img src="cathy-renoir.jpg" alt="" width="200" height="200">
+<img src="cathy-ukiyoe.jpg" alt="" width="200" height="200">
+<img src="cathy-vroid.jpg"  alt="" width="200" height="200">
+<img src="daisy-renoir.jpg" alt="" width="200" height="200">
+<img src="daisy-ukiyoe.jpg" alt="" width="200" height="200">
+<img src="daisy-vroid.jpg"  alt="" width="200" height="200">
