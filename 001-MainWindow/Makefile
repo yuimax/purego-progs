@@ -16,7 +16,7 @@ go.mod: $(APP).go
 	go mod init $(APP)
 	go mod tidy
 	go get github.com/ebitengine/purego
-
+	
 resource.syso: versioninfo.json ../files/purego.manifest ../files/icon.ico
 	go generate
 
