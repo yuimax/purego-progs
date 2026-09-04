@@ -1,7 +1,4 @@
 //go:generate goversioninfo
-
-// SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2024 The Ebitengine Authors
 package main
 
 import (
@@ -20,6 +17,27 @@ const (
 	SW_SHOW             = 5
 	WM_DESTROY          = 2
 	WM_PAINT            = 15
+	WM_SETCURSOR        = 32
+	HTCLIENT            = 1
+)
+
+const (
+	IDC_ARROW       = 32512
+	IDC_IBEAM       = 32513
+	IDC_WAIT        = 32514
+	IDC_CROSS       = 32515
+	IDC_UPARROW     = 32516
+	IDC_SIZENWSE    = 32642
+	IDC_SIZENESW    = 32643
+	IDC_SIZEWE      = 32644
+	IDC_SIZENS      = 32645
+	IDC_SIZEALL     = 32646
+	IDC_NO          = 32648
+	IDC_HAND        = 32649
+	IDC_APPSTARTING = 32650
+	IDC_HELP        = 32651
+	IDC_ICON        = 32641
+	IDC_SIZE        = 32640
 )
 
 const (
@@ -59,12 +77,6 @@ const (
 	COLOR_GRADIENTINACTIVECAPTION = 28
 )
 
-// SetBkMode の mode 引数
-const (
-	TRANSPARENT = 1
-	OPAQUE      = 2
-)
-
 type (
 	ATOM      uint16
 	HANDLE    uintptr
@@ -79,7 +91,7 @@ type (
 )
 
 type WNDCLASSEX struct {
-	_ structs.HostLayout
+	_          structs.HostLayout
 	Size       uint32
 	Style      uint32
 	WndProc    uintptr
@@ -95,18 +107,21 @@ type WNDCLASSEX struct {
 }
 
 type RECT struct {
-	_ structs.HostLayout
-	Left, Top, Right, Bottom int32
+	_      structs.HostLayout
+	Left   int32
+	Top    int32
+	Right  int32
+	Bottom int32
 }
-
 
 type POINT struct {
 	_ structs.HostLayout
-	X, Y int32
+	X int32
+	Y int32
 }
 
 type MSG struct {
-	_ structs.HostLayout
+	_       structs.HostLayout
 	Hwnd    HWND
 	Message uint32
 	WParam  uintptr
@@ -116,7 +131,7 @@ type MSG struct {
 }
 
 type PAINTSTRUCT struct {
-	_ structs.HostLayout
+	_           structs.HostLayout
 	Hdc         HDC
 	FErase      BOOL
 	RcPaint     RECT
@@ -128,9 +143,17 @@ type PAINTSTRUCT struct {
 var (
 	GetModuleHandle func(modulename *uint16) HINSTANCE
 	RegisterClassEx func(w *WNDCLASSEX) ATOM
-	CreateWindowEx  func(exStyle uint, className, windowName *uint16,
-		style uint, x, y, width, height int, parent HWND, menu HMENU,
-		instance HINSTANCE, param unsafe.Pointer) HWND
+	CreateWindowEx  func(
+		exStyle uint,
+		className *uint16,
+		windowName *uint16,
+		style uint,
+		x, y, width, height int,
+		parent HWND,
+		menu HMENU,
+		instance HINSTANCE,
+		param unsafe.Pointer,
+	) HWND
 	AdjustWindowRect func(rect *RECT, style uint, menu bool) bool
 	ShowWindow       func(hwnd HWND, cmdshow int) bool
 	GetMessage       func(msg *MSG, hwnd HWND, msgFilterMin, msgFilterMax uint32) int
@@ -138,16 +161,12 @@ var (
 	DispatchMessage  func(msg *MSG) uintptr
 	DefWindowProc    func(hwnd HWND, msg uint32, wParam, lParam uintptr) uintptr
 	PostQuitMessage  func(exitCode int)
-
-	BeginPaint    func(hwnd HWND, lpPaint *PAINTSTRUCT) HDC
-	EndPaint      func(hwnd HWND, lpPaint *PAINTSTRUCT) bool
-	GetClientRect func(hwnd HWND, lpRect *RECT) bool
-	FillRect      func(hdc HDC, lprc *RECT, hbr HBRUSH) int
-
-	Rectangle     func(hdc HDC, left, right, top, bottom int32) bool
-	Ellipse       func(hdc HDC, left, right, top, bottom int32) bool
-	SetBkMode     func(hdc HDC, mode uint32) int
-	TextOut       func(hdc HDC, x, y int32, lpString *uint16, c int32) bool
+	BeginPaint       func(hwnd HWND, lpPaint *PAINTSTRUCT) HDC
+	EndPaint         func(hwnd HWND, lpPaint *PAINTSTRUCT) bool
+	GetClientRect    func(hwnd HWND, lpRect *RECT) bool
+	FillRect         func(hdc HDC, lprc *RECT, hbr HBRUSH) int
+	LoadCursor       func(instance HINSTANCE, cursorName *uint16) HCURSOR
+	SetCursor        func(cursor HCURSOR)
 )
 
 func init() {
@@ -168,12 +187,8 @@ func init() {
 	purego.RegisterLibFunc(&EndPaint, user32, "EndPaint")
 	purego.RegisterLibFunc(&GetClientRect, user32, "GetClientRect")
 	purego.RegisterLibFunc(&FillRect, user32, "FillRect")
-
-	gdi32 := windows.NewLazySystemDLL("gdi32.dll").Handle()
-	purego.RegisterLibFunc(&Rectangle, gdi32, "Rectangle")
-	purego.RegisterLibFunc(&Ellipse, gdi32, "Ellipse")
-	purego.RegisterLibFunc(&SetBkMode, gdi32, "SetBkMode")
-	purego.RegisterLibFunc(&TextOut, gdi32, "TextOutW")
+	purego.RegisterLibFunc(&SetCursor, user32, "SetCursor")
+	purego.RegisterLibFunc(&LoadCursor, user32, "LoadCursorW")
 
 	runtime.LockOSThread()
 }
@@ -183,34 +198,35 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	inst := GetModuleHandle(className)
+	instance := GetModuleHandle(className)
 
 	wc := WNDCLASSEX{
 		Size:      uint32(unsafe.Sizeof(WNDCLASSEX{})),
 		WndProc:   syscall.NewCallback(wndProc),
-		Instance:  inst,
+		Instance:  instance,
 		ClassName: className,
 	}
 
 	RegisterClassEx(&wc)
 
-	wr := RECT{
-		Left:   0,
-		Top:    0,
-		Right:  320,
-		Bottom: 240,
-	}
-	title, err := syscall.UTF16PtrFromString("My Title")
+	title, err := syscall.UTF16PtrFromString("purego 001-MainWindow")
 	if err != nil {
 		panic(err)
 	}
-	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false)
+
 	hwnd := CreateWindowEx(
-		0, className,
-		title,
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, int(wr.Right-wr.Left), int(wr.Bottom-wr.Top),
-		0, 0, inst, nil,
+		0,                   // dwExStyle
+		className,           // lpClassName
+		title,               // lpWindowName
+		WS_OVERLAPPEDWINDOW, // dwStyle
+		CW_USEDEFAULT,       // X
+		CW_USEDEFAULT,       // Y
+		600,                 // nWidth
+		400,                 // nHeight
+		0,                   // hWndParent
+		0,                   // hMenu
+		instance,            // instance
+		nil,                 // lpParam
 	)
 	if hwnd == 0 {
 		panic(syscall.GetLastError())
@@ -225,45 +241,46 @@ func main() {
 	}
 }
 
+func LOWORD(x uintptr) uint16 {
+	return uint16(x & 0xffff)
+}
+
+func HIWORD(x uintptr) uint16 {
+	return uint16((x >> 16) & 0xffff)
+}
+
+func MAKEINTRESOURCE(resId uint16) *uint16 {
+    return (*uint16)(unsafe.Pointer(uintptr(resId)))
+}
+
 func wndProc(hwnd HWND, msg uint32, wparam, lparam uintptr) uintptr {
 	switch msg {
+
 	case WM_PAINT:
-		ps := PAINTSTRUCT{}
+		var rect RECT
+		GetClientRect(hwnd, &rect)
+
+		var ps PAINTSTRUCT
 		hdc := BeginPaint(hwnd, &ps)
-
-		// 1. 背景の塗りつぶし
-		clientRect := RECT{}
-		GetClientRect(hwnd, &clientRect)
-		FillRect(hdc, &clientRect, (HBRUSH)(COLOR_WINDOW + 1))
-
-		// 2. 四角形の描画
-		Rectangle(hdc, 50, 50, 200, 150)
-
-		// 3. 楕円の描画
-		Ellipse(hdc, 100, 100, 250, 200)
-
-		// 4. テキストの描画
-
-		// 背景透過を設定（テキスト周囲の白背景化を防ぐ）
-		SetBkMode(hdc, TRANSPARENT)
-
-		// 文字列をUTF16のスライスに変換する
-		// UTF16FromString() は末尾に自動的に 0x0000 を入れるので注意
-		text := "こんにちは世界"
-		u16s, _ := windows.UTF16FromString(text)
-
-		// TextOutで出力する
-		TextOut(hdc, 60, 110,
-			(*uint16)(unsafe.Pointer(&u16s[0])),
-			(int32)(len(u16s) - 1),
-		)
-
-		// 描画終了処理
+		FillRect(hdc, &rect, (HBRUSH)(COLOR_WINDOW+1))
 		EndPaint(hwnd, &ps)
+
+	case WM_SETCURSOR:
+		hitTest := LOWORD(lparam)
+
+		// クライアント領域上にカーソルがある場合カーソルをセット
+		if hitTest == HTCLIENT {
+			cursor := LoadCursor(0, MAKEINTRESOURCE(IDC_ARROW)) // 矢印カーソル
+			SetCursor(cursor)
+			return 1 // 処理済(TRUE)を示す
+		}
+
+		// クライアント領域外（タイトルバーや枠線など）は
+		// DefWindowProc() に流してシステム既定の挙動とする
 
 	case WM_DESTROY:
 		PostQuitMessage(0)
-
 	}
+
 	return DefWindowProc(hwnd, msg, wparam, lparam)
 }
