@@ -481,7 +481,7 @@ func wndProc(hwnd HWND, msg uint32, wparam, lparam uintptr) uintptr {
 
 		// 4. テキストの描画
 
-		// フォントを作成（例: Noto Sans JP、サイズ20px）
+		// フォントを作成（例: Noto Sans JP、サイズ32px）
 		fontName, err := windows.UTF16PtrFromString("Noto Sans JP")
 		if err != nil {
 			panic(err)
