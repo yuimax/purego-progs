@@ -99,13 +99,13 @@ const (
 	COLOR_GRADIENTINACTIVECAPTION = 28
 )
 
-// SetBkMode の mode
+// SetBkMode mode
 const (
 	TRANSPARENT = 1
 	OPAQUE      = 2
 )
 
-// DrawText の format
+// DrawText format
 const (
 	DT_TOP                  = 0x00000000
 	DT_LEFT                 = 0x00000000
@@ -163,7 +163,7 @@ const (
 	HTZOOM        = 9
 )
 
-// Font weight
+// Font constants
 const (
 	FW_DONTCARE   = 0
 	FW_THIN       = 100
@@ -180,10 +180,7 @@ const (
 	FW_ULTRABOLD  = 800
 	FW_HEAVY      = 900
 	FW_BLACK      = 900
-)
 
-// Font constants
-const (
 	OUT_DEFAULT_PRECIS        = 0
 	OUT_STRING_PRECIS         = 1
 	OUT_CHARACTER_PRECIS      = 2
@@ -262,6 +259,30 @@ const (
 	FF_MODERN     = 0x30
 	FF_SCRIPT     = 0x40
 	FF_DECORATIVE = 0x50
+)
+
+// Stock Objects
+const (
+	WHITE_BRUSH         =0
+	LTGRAY_BRUSH        =1
+	GRAY_BRUSH          =2
+	DKGRAY_BRUSH        =3
+	BLACK_BRUSH         =4
+	NULL_BRUSH          =5
+	HOLLOW_BRUSH        =NULL_BRUSH
+	WHITE_PEN           =6
+	BLACK_PEN           =7
+	NULL_PEN            =8
+	OEM_FIXED_FONT      =10
+	ANSI_FIXED_FONT     =11
+	ANSI_VAR_FONT       =12
+	SYSTEM_FONT         =13
+	DEVICE_DEFAULT_FONT =14
+	DEFAULT_PALETTE     =15
+	SYSTEM_FIXED_FONT   =16
+	DEFAULT_GUI_FONT    =17
+	DC_BRUSH            =18
+	DC_PEN              =19
 )
 
 type (
@@ -362,6 +383,7 @@ var (
 		charset, outPrecisioin, clipPrecision, quality, pitchandfamily uint32,
 		facename *uint16,
 	) HFONT
+	GetStockObject func(id int32) HGDIOBJECT
 	SelectObject func(hdc HDC, handle HGDIOBJECT) HGDIOBJECT
 	DeleteObject func(handle HGDIOBJECT) BOOL
 )
@@ -395,6 +417,7 @@ func init() {
 	purego.RegisterLibFunc(&TextOut, gdi32, "TextOutW")
 
 	purego.RegisterLibFunc(&CreateFont, gdi32, "CreateFontW")
+	purego.RegisterLibFunc(&GetStockObject, gdi32, "GetStockObject")
 	purego.RegisterLibFunc(&SelectObject, gdi32, "SelectObject")
 	purego.RegisterLibFunc(&DeleteObject, gdi32, "DeleteObject")
 
@@ -468,30 +491,29 @@ func wndProc(hwnd HWND, msg uint32, wparam, lparam uintptr) uintptr {
 		ps := PAINTSTRUCT{}
 		hdc := BeginPaint(hwnd, &ps)
 
-		// 1. 背景の塗りつぶし
+		// 背景の塗りつぶし
 		clientRect := RECT{}
 		GetClientRect(hwnd, &clientRect)
 		FillRect(hdc, &clientRect, (HBRUSH)(COLOR_WINDOW+1))
 
-		// 2. 四角形の描画
+		// NULLブラシを選択し、四角形と楕円を描画
+		oldBrush := HBRUSH(SelectObject(hdc, GetStockObject(NULL_BRUSH)))
 		Rectangle(hdc, 50, 50, 200, 150)
-
-		// 3. 楕円の描画
 		Ellipse(hdc, 100, 100, 250, 200)
 
-		// 4. テキストの描画
+		// テキストの描画
 
-		// フォントを作成（例: Noto Sans JP、サイズ32px）
+		// フォントを作成
 		fontName, err := windows.UTF16PtrFromString("Noto Sans JP")
 		if err != nil {
 			panic(err)
 		}
 		font := CreateFont(
-			32,                        // フォントの高さ (px)
+			24,                        // フォントの高さ (px)
 			0,                         // 幅（0で自動調整）
 			0,                         // エスケープメント角度
 			0,                         // ベースライン角度
-			FW_BOLD,                   // 太さ (FW_NORMAL, FW_BOLD など)
+			FW_NORMAL,                 // 太さ (FW_NORMAL, FW_BOLD など)
 			FALSE,                     // 斜体 (TRUE / FALSE)
 			FALSE,                     // 下線
 			FALSE,                     // 打消線
@@ -509,7 +531,7 @@ func wndProc(hwnd HWND, msg uint32, wparam, lparam uintptr) uintptr {
 		// 背景透過を設定（テキスト周囲の白背景化を防ぐ）
 		SetBkMode(hdc, TRANSPARENT)
 
-		// 文字列を *uint16 に変換し、末尾に 0x0000 を入れる
+		// 文字列を *uint16 に変換、末尾に 0x0000 が入る
 		text := "Hello world\nこんにちは世界\n"
 		textU16, err := windows.UTF16PtrFromString(text)
 		if err != nil {
@@ -518,15 +540,17 @@ func wndProc(hwnd HWND, msg uint32, wparam, lparam uintptr) uintptr {
 
 		// テキストを出力する
 		DrawText(hdc,
-			textU16,
-			-1,	// 文字列長を自動計算
-			&RECT{Left: 70, Top: 100}, // DT_NOCLIP の場合、Right と Bottom は不用
+			textU16, -1,	// -1 で文字数を自動計算
+			&RECT{Left: 70, Top: 100}, // DT_NOCLIP の場合、Right と Bottom は無視される
 			DT_LEFT|DT_TOP|DT_NOCLIP,
 		)
 
 		// 元のフォントに戻し、不要になったフォントを破棄する
 		SelectObject(hdc, HGDIOBJECT(oldFont))
 		DeleteObject(HGDIOBJECT(font))
+
+		// 元のブラシに戻すが、不用になったNULLブラシは破棄する必要がない
+		SelectObject(hdc, HGDIOBJECT(oldBrush))
 
 		// 描画終了処理
 		EndPaint(hwnd, &ps)
