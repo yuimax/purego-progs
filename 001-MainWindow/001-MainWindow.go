@@ -4,7 +4,6 @@ package main
 import (
 	"runtime"
 	"structs"
-	"syscall"
 	"unsafe"
 
 	"github.com/ebitengine/purego"
@@ -18,9 +17,14 @@ const (
 	WM_DESTROY          = 2
 	WM_PAINT            = 15
 	WM_SETCURSOR        = 32
+)
+
+// HitTest
+const (
 	HTCLIENT            = 1
 )
 
+// Standard Cursor ID
 const (
 	IDC_ARROW       = 32512
 	IDC_IBEAM       = 32513
@@ -194,7 +198,7 @@ func init() {
 }
 
 func main() {
-	className, err := syscall.UTF16PtrFromString("Sample Window Class")
+	className, err := windows.UTF16PtrFromString("Sample Window Class")
 	if err != nil {
 		panic(err)
 	}
@@ -202,14 +206,14 @@ func main() {
 
 	wc := WNDCLASSEX{
 		Size:      uint32(unsafe.Sizeof(WNDCLASSEX{})),
-		WndProc:   syscall.NewCallback(wndProc),
+		WndProc:   windows.NewCallback(wndProc),
 		Instance:  instance,
 		ClassName: className,
 	}
 
 	RegisterClassEx(&wc)
 
-	title, err := syscall.UTF16PtrFromString("purego 001-MainWindow")
+	title, err := windows.UTF16PtrFromString("purego 001-MainWindow")
 	if err != nil {
 		panic(err)
 	}
@@ -229,7 +233,7 @@ func main() {
 		nil,                 // lpParam
 	)
 	if hwnd == 0 {
-		panic(syscall.GetLastError())
+		panic(windows.GetLastError())
 	}
 
 	ShowWindow(hwnd, SW_SHOW)
